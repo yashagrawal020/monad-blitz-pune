@@ -251,7 +251,14 @@ h2 { font-size: 1.55rem; }
 
 .toolTrace p {
   margin: 0;
+  min-width: 0;
   font-size: 0.78rem;
+  overflow-wrap: anywhere;
+  word-break: break-word;
+}
+
+.toolTrace p strong {
+  overflow-wrap: anywhere;
 }
 
 .decisionCard {
