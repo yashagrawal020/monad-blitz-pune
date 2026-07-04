@@ -19,18 +19,17 @@ contract TreasuryDecisionRegistry {
         uint256 createdAt;
     }
 
-    uint256 public nextDecisionId = 1;
-    mapping(uint256 => Decision) public decisions;
-    mapping(uint256 => uint256[]) public decisionsByProposal;
+    mapping(uint256 => Decision) public decisionsByProposalId;
+    mapping(uint256 => bool) public decisionExists;
 
     event DecisionRecorded(
-        uint256 indexed decisionId,
         uint256 indexed proposalId,
         address indexed proposer,
         bytes32 finalDecisionHash
     );
 
-    function recordDecision(Decision calldata decision) external returns (uint256 decisionId) {
+    function recordDecision(Decision calldata decision) external returns (uint256 recordedProposalId) {
+        require(!decisionExists[decision.proposalId], "decision exists");
         require(decision.proposalHash != bytes32(0), "proposal hash required");
         require(decision.researchReportHash != bytes32(0), "research hash required");
         require(decision.skepticReportHash != bytes32(0), "skeptic hash required");
@@ -39,8 +38,8 @@ contract TreasuryDecisionRegistry {
         _validateVote(decision.skepticVote);
         _validateVote(decision.councilVote);
 
-        decisionId = nextDecisionId++;
-        decisions[decisionId] = Decision({
+        decisionExists[decision.proposalId] = true;
+        decisionsByProposalId[decision.proposalId] = Decision({
             proposalId: decision.proposalId,
             proposer: msg.sender,
             researchAgentId: decision.researchAgentId,
@@ -56,16 +55,13 @@ contract TreasuryDecisionRegistry {
             decisionURI: decision.decisionURI,
             createdAt: block.timestamp
         });
-        decisionsByProposal[decision.proposalId].push(decisionId);
-        emit DecisionRecorded(decisionId, decision.proposalId, msg.sender, decision.finalDecisionHash);
+        emit DecisionRecorded(decision.proposalId, msg.sender, decision.finalDecisionHash);
+        return decision.proposalId;
     }
 
-    function getDecision(uint256 decisionId) external view returns (Decision memory) {
-        return decisions[decisionId];
-    }
-
-    function getDecisionsByProposal(uint256 proposalId) external view returns (uint256[] memory) {
-        return decisionsByProposal[proposalId];
+    function getDecisionByProposal(uint256 proposalId) external view returns (Decision memory) {
+        require(decisionExists[proposalId], "decision missing");
+        return decisionsByProposalId[proposalId];
     }
 
     function _validateVote(uint8 vote) internal pure {

@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
-import type { AgentReport, FinalDecision, Proposal, RoomEvent } from "../../shared/types";
+import type { AgentReport, FinalDecision, ParallelDemoRun, Proposal, RoomEvent } from "../../shared/types";
 
 type ProposalResponse = {
   proposal: Proposal;
@@ -32,6 +32,9 @@ const api = {
   },
   async proposal(proposalId: string): Promise<ProposalResponse> {
     return fetch(`/api/proposals/${proposalId}`).then((res) => res.json());
+  },
+  async runParallelDemo(): Promise<{ runs: ParallelDemoRun[] }> {
+    return fetch("/api/demo/parallel", { method: "POST" }).then((res) => res.json());
   }
 };
 
@@ -39,7 +42,9 @@ export function App() {
   const [protocolData, setProtocolData] = useState<ProtocolResponse>();
   const [proposal, setProposal] = useState<Proposal>();
   const [events, setEvents] = useState<RoomEvent[]>([]);
+  const [parallelRuns, setParallelRuns] = useState<ParallelDemoRun[]>([]);
   const [loading, setLoading] = useState(false);
+  const [parallelLoading, setParallelLoading] = useState(false);
   const [error, setError] = useState<string>();
 
   useEffect(() => {
@@ -93,6 +98,19 @@ export function App() {
     }
   }
 
+  async function runParallelDemo() {
+    setParallelLoading(true);
+    setError(undefined);
+    try {
+      const response = await api.runParallelDemo();
+      setParallelRuns(response.runs);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : String(err));
+    } finally {
+      setParallelLoading(false);
+    }
+  }
+
   return (
     <main className="shell">
       <section className="hero">
@@ -100,13 +118,13 @@ export function App() {
           <p className="eyebrow">Monad Agent Treasury Council</p>
           <h1>Agents reason off-chain. Monad records accountability.</h1>
           <p className="heroCopy">
-            A deterministic three-agent council evaluates treasury allocation options, publishes structured reports, and anchors the final decision hash on Monad.
+            A backend harness runs a three-agent council. Each agent can call approved tools, publish structured reports, and anchor the final decision hash on Monad.
           </p>
         </div>
         <div className="heroCard">
           <span>Architecture</span>
           <strong>Explicit orchestration</strong>
-          <p>No polling, no background watchers. The backend invokes Research, Skeptic, and Council agents in order.</p>
+          <p>No polling, no background watchers. The backend invokes Research, Skeptic, and Council in order, then records one final on-chain proof.</p>
         </div>
       </section>
 
@@ -138,6 +156,25 @@ export function App() {
       </section>
 
       {protocolData && <ProtocolStrip data={protocolData} />}
+
+      <section className="panel parallelPanel">
+        <div className="panelHeader">
+          <span>Monad parallel proof</span>
+          <h2>Three independent decisions, one concurrent commit burst</h2>
+        </div>
+        <p>
+          Each tx writes to <code>decisionsByProposalId[proposalId]</code>. Three wallets avoid nonce serialization.
+          The councils reason off-chain; Monad commits independent final decisions concurrently.
+        </p>
+        <button className="secondary" onClick={runParallelDemo} disabled={parallelLoading}>
+          {parallelLoading ? "Running councils, then parallel commits..." : "Run Monad Parallel Demo"}
+        </button>
+        {parallelRuns.length > 0 && (
+          <div className="parallelGrid">
+            {parallelRuns.map((run) => <ParallelRunCard key={run.proposal.id} run={run} />)}
+          </div>
+        )}
+      </section>
 
       <section className="grid three">
         <ReportCard title="ResearchAgent" subtitle="Upside and yield" report={researchReport} />
@@ -174,10 +211,36 @@ function ProtocolStrip({ data }: { data: ProtocolResponse }) {
         <article key={protocol.id}>
           <span>{protocol.name}</span>
           <strong>{protocol.apy}% APY</strong>
-          <p>TVL ${protocol.tvl.toLocaleString()} Ã‚Â· liquidity {(protocol.liquidityScore * 100).toFixed(0)}% Ã‚Â· {protocol.exploitHistory ? "exploit seeded" : "clean history"}</p>
+          <p>TVL ${protocol.tvl.toLocaleString()} · liquidity {(protocol.liquidityScore * 100).toFixed(0)}% · {protocol.exploitHistory ? "exploit seeded" : "clean history"}</p>
         </article>
       ))}
     </section>
+  );
+}
+
+function ParallelRunCard({ run }: { run: ParallelDemoRun }) {
+  const proof = run.chainReceipt;
+  const modeLabel = proof.mode === "monad" ? "MONAD LIVE" : "MOCK";
+  return (
+    <article className="parallelCard">
+      <div className="parallelTitle">
+        <span className={`modeBadge ${proof.mode}`}>{modeLabel}</span>
+        <strong>{run.label}</strong>
+      </div>
+      <p>{run.finalDecision.recommendation}</p>
+      <dl>
+        <dt>Protocol</dt><dd>{run.finalDecision.selectedProtocolId}</dd>
+        <dt>Elapsed</dt><dd>{proof.elapsedMs}ms</dd>
+        <dt>Wallet</dt><dd className="hash">{proof.senderAddress ?? "not configured"}</dd>
+        <dt>Gas limit</dt><dd>{proof.gasLimit ?? "mock"}</dd>
+      </dl>
+      <code className="hash">{run.finalDecision.finalDecisionHash}</code>
+      {proof.explorerUrl ? (
+        <a className="txLink" href={proof.explorerUrl} target="_blank" rel="noreferrer">View tx</a>
+      ) : (
+        <code className="hash">{proof.txHash}</code>
+      )}
+    </article>
   );
 }
 
@@ -190,6 +253,7 @@ function ReportCard({ title, subtitle, report }: { title: string; subtitle: stri
           <p>{report.summary}</p>
           <div className="metricRow"><span>Vote</span><strong>{voteLabel(report.vote)}</strong></div>
           <div className="metricRow"><span>Confidence</span><strong>{Math.round(report.confidence * 100)}%</strong></div>
+          <ToolTraceList traces={report.toolTrace} />
           <code className="hash">{report.payloadHash}</code>
         </>
       ) : <p>Waiting for explicit backend invocation.</p>}
@@ -205,11 +269,24 @@ function DecisionCard({ decision, proof }: { decision?: FinalDecision; proof?: R
         <>
           <p>{decision.summary}</p>
           <div className="decisionBig">{decision.allocationPercent}% to {decision.selectedProtocolId}</div>
+          <ToolTraceList traces={decision.toolTrace} />
           <code className="hash">{decision.finalDecisionHash}</code>
-          {proof && <p className="proof">Chain mode: {String(proof.mode)} Ã‚Â· tx {String(proof.txHash)}</p>}
+          {proof && <p className="proof">Chain mode: {String(proof.mode)} · tx {String(proof.txHash)}</p>}
         </>
       ) : <p>Final decision appears after both specialist agents submit reports.</p>}
     </article>
+  );
+}
+
+function ToolTraceList({ traces }: { traces: Array<{ toolName: string; resultSummary: string }> }) {
+  if (!traces.length) return null;
+  return (
+    <div className="toolTrace">
+      <span>Harness tool calls</span>
+      {traces.map((trace, index) => (
+        <p key={`${trace.toolName}-${index}`}><strong>{trace.toolName}</strong>: {trace.resultSummary}</p>
+      ))}
+    </div>
   );
 }
 

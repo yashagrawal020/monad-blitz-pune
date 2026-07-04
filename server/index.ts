@@ -1,8 +1,9 @@
+import "dotenv/config";
 import cors from "cors";
 import express from "express";
 import { z } from "zod";
 import { PROTOCOLS, TREASURY_POLICY } from "./data/demoData";
-import { runProposalPipeline } from "./orchestrator";
+import { runParallelCommitDemo, runProposalPipeline } from "./orchestrator";
 import { createProposal, getProposal, getRoomEvents, getState } from "./store/state";
 
 const app = express();
@@ -74,6 +75,16 @@ app.post("/api/proposals/:proposalId/record-on-chain", (_req, res) => {
     return;
   }
   res.status(409).json({ error: "run the proposal pipeline first; MVP records on-chain during /run" });
+});
+
+app.post("/api/demo/parallel", async (_req, res) => {
+  try {
+    const result = await runParallelCommitDemo();
+    res.json(result);
+  } catch (error) {
+    const message = error instanceof Error ? error.message : String(error);
+    res.status(500).json({ error: message });
+  }
 });
 
 app.listen(port, () => {

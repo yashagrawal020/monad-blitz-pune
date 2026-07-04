@@ -19,6 +19,7 @@ export type ProposalStatus =
 
 export type RoomEventType =
   | "proposal.created"
+  | "tool.used"
   | "analysis.submitted"
   | "vote.cast"
   | "decision.finalized"
@@ -68,6 +69,12 @@ export type ScoreBreakdown = {
   rationale: string;
 };
 
+export type AgentToolTrace = {
+  toolName: string;
+  args: Record<string, unknown>;
+  resultSummary: string;
+};
+
 export type AgentReport = {
   agentName: "ResearchAgent" | "SkepticAgent";
   role: "research" | "risk";
@@ -79,6 +86,7 @@ export type AgentReport = {
   scores: ScoreBreakdown[];
   evidenceRefs: string[];
   assumptions: string[];
+  toolTrace: AgentToolTrace[];
   payloadHash: `0x${string}`;
 };
 
@@ -93,6 +101,7 @@ export type FinalDecision = {
   summary: string;
   researchReportHash: `0x${string}`;
   skepticReportHash: `0x${string}`;
+  toolTrace: AgentToolTrace[];
   finalDecisionHash: `0x${string}`;
 };
 
@@ -107,10 +116,34 @@ export type RoomEvent = {
   createdAt: string;
 };
 
+export type ChainRecordReceipt = {
+  mode: "monad" | "mock";
+  txHash: `0x${string}`;
+  decisionId: string;
+  proposalId: string;
+  submittedAt: string;
+  confirmedAt: string;
+  elapsedMs: number;
+  senderAddress?: `0x${string}`;
+  explorerUrl?: string;
+  registryAddress?: `0x${string}`;
+  gasLimit?: string;
+};
+
 export type RunResult = {
   proposal: Proposal;
   researchReport?: AgentReport;
   skepticReport?: AgentReport;
   finalDecision?: FinalDecision;
+  events: RoomEvent[];
+};
+
+export type ParallelDemoRun = {
+  label: string;
+  proposal: Proposal;
+  researchReport: AgentReport;
+  skepticReport: AgentReport;
+  finalDecision: FinalDecision;
+  chainReceipt: ChainRecordReceipt;
   events: RoomEvent[];
 };

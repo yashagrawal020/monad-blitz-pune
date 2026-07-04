@@ -144,11 +144,114 @@ h2 { font-size: 1.55rem; }
 .protocolStrip strong { display: block; font-size: 1.6rem; margin: 6px 0; }
 .protocolStrip p, .reportCard p, .decisionCard p, .heroCard p, .createPanel p { color: var(--muted); line-height: 1.55; }
 
+.parallelPanel {
+  margin: 22px 0;
+  background:
+    linear-gradient(135deg, rgba(255, 251, 235, 0.9), rgba(233, 165, 47, 0.2)),
+    var(--panel);
+}
+
+.parallelPanel code {
+  font-family: "Azeret Mono", monospace;
+  color: var(--leaf);
+}
+
+.parallelGrid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 14px;
+  margin-top: 18px;
+}
+
+.parallelCard {
+  display: grid;
+  gap: 12px;
+  padding: 18px;
+  border-radius: 22px;
+  border: 1px solid var(--line);
+  background: rgba(255, 255, 255, 0.38);
+}
+
+.parallelCard p {
+  margin: 0;
+  color: var(--muted);
+  line-height: 1.45;
+}
+
+.parallelCard dl {
+  display: grid;
+  grid-template-columns: 82px minmax(0, 1fr);
+  gap: 8px;
+  margin: 0;
+}
+
+.parallelCard dd {
+  margin: 0;
+  min-width: 0;
+}
+
+.parallelTitle {
+  display: grid;
+  gap: 8px;
+}
+
+.parallelTitle strong {
+  font-family: Fraunces, Georgia, serif;
+  font-size: 1.35rem;
+  line-height: 1;
+}
+
+.modeBadge {
+  width: fit-content;
+  border-radius: 999px;
+  padding: 0.32rem 0.58rem;
+  font-family: "Azeret Mono", monospace;
+  font-size: 0.66rem;
+  letter-spacing: 0.08em;
+  color: #fff8dd;
+  background: var(--red);
+}
+
+.modeBadge.monad {
+  background: var(--leaf);
+}
+
+.txLink {
+  width: fit-content;
+  font-family: "Azeret Mono", monospace;
+  font-size: 0.76rem;
+  color: var(--leaf);
+  font-weight: 700;
+}
+
 .metricRow {
   display: flex;
   justify-content: space-between;
   border-top: 1px solid var(--line);
   padding: 10px 0;
+}
+
+.toolTrace {
+  display: grid;
+  gap: 8px;
+  margin: 12px 0;
+  padding: 12px;
+  border: 1px dashed var(--line);
+  border-radius: 16px;
+  background: rgba(255, 255, 255, 0.28);
+}
+
+.toolTrace span {
+  font-family: "Azeret Mono", monospace;
+  font-size: 0.68rem;
+  color: var(--leaf);
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+}
+
+.toolTrace p {
+  margin: 0;
+  font-size: 0.78rem;
 }
 
 .decisionCard {
@@ -179,7 +282,7 @@ h2 { font-size: 1.55rem; }
 .error { color: var(--red); font-weight: 800; }
 
 @media (max-width: 860px) {
-  .hero, .two, .three, .protocolStrip { grid-template-columns: 1fr; }
+  .hero, .two, .three, .protocolStrip, .parallelGrid { grid-template-columns: 1fr; }
   .event { grid-template-columns: 1fr; }
   .statusPanel dl { grid-template-columns: 1fr; }
 }

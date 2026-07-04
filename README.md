@@ -12,6 +12,7 @@ Built with MONSKILLS for Monad testnet.
 - On-chain identity through `AgentRegistry`.
 - On-chain decision accountability through `TreasuryDecisionRegistry`.
 - Monad-specific UX: fast finality, synchronous receipt waiting, and explicit gas-limit handling.
+- Monad-specific parallel commit demo: three independent proposal decisions are submitted concurrently from three wallets.
 - Frontend timeline showing off-chain reasoning and final chain proof.
 
 ## Quick Start
@@ -31,6 +32,7 @@ Use the UI:
 1. Click `Create demo proposal`.
 2. Click `Run agent council`.
 3. Watch the event timeline, reports, and final proof panel.
+4. Click `Run Monad Parallel Demo` to run three councils and submit the final decision commits concurrently.
 
 If wallet and contract env vars are not configured, the backend records a deterministic mock proof. This keeps the local demo runnable before deploying contracts.
 
@@ -65,11 +67,29 @@ npm run deploy:monad
 
 The deployment script writes `.tmp/deployment.json`; the backend can read this file if explicit contract env vars are omitted.
 
+For the live parallel demo, configure three funded keystore files:
+
+```text
+PARALLEL_MONSKILLS_KEYSTORE_FILES=file1,file2,file3
+PARALLEL_RECORD_DECISION_GAS_LIMIT=350000
+```
+
+If Foundry/cast keystores are unavailable during the hackathon, use funded testnet burner private keys instead:
+
+```text
+PARALLEL_PRIVATE_KEYS=0xkey1,0xkey2,0xkey3
+PARALLEL_RECORD_DECISION_GAS_LIMIT=350000
+```
+
+The councils run sequentially for reliability. Only the three final `recordDecision` transactions are fired concurrently. This keeps the demo focused on Monad's independent transaction execution instead of LLM concurrency.
+
 ## Monad Notes Applied
 
 - Monad is EVM-compatible, so the app uses Solidity, Hardhat, and viem.
 - The backend awaits the decision transaction receipt before marking `recorded_on_chain`; Monad finality is fast enough for this to be demo-friendly.
 - Monad charges based on gas limit, so the chain client estimates gas and applies only a 10% buffer for the `recordDecision` call.
+- The parallel demo hardcodes the `recordDecision` gas limit to avoid live estimation variance during the timed run.
+- Parallel demo transactions write to `decisionsByProposalId[proposalId]` and use three wallets to avoid shared storage counters and account nonce serialization.
 - Never use unverified/hallucinated contract addresses. Deployment output is written to `.tmp/deployment.json`, and production/testnet addresses should be verified on the explorer before use.
 
 ## Architecture
@@ -115,9 +135,11 @@ GET  /api/proposals/:proposalId
 GET  /api/rooms/:roomId/events
 POST /api/proposals/:proposalId/run
 POST /api/proposals/:proposalId/record-on-chain
+POST /api/demo/parallel
 ```
 
 `POST /api/proposals/:proposalId/run` executes the full MVP pipeline.
+`POST /api/demo/parallel` creates three seeded proposals, prepares each council decision, and commits all three final decisions concurrently.
 
 ## Non-Goals For MVP
 

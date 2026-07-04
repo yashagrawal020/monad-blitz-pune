@@ -18,11 +18,11 @@ describe("Treasury council contracts", async () => {
     assert.notEqual(agent.owner, zeroAddress);
   });
 
-  it("records decisions and rejects invalid votes", async () => {
+  it("records decisions by proposal id and rejects duplicates", async () => {
     const decisions = await viem.deployContract("TreasuryDecisionRegistry");
     const hash = keccak256(toBytes("decision"));
     await decisions.write.recordDecision([{
-      proposalId: 1n,
+      proposalId: 101n,
       proposer: zeroAddress,
       researchAgentId: 1n,
       skepticAgentId: 2n,
@@ -37,8 +37,57 @@ describe("Treasury council contracts", async () => {
       decisionURI: "local://decision/1",
       createdAt: 1n
     }]);
-    const stored = await decisions.read.getDecision([1n]);
-    assert.equal(stored.proposalId, 1n);
+    const stored = await decisions.read.getDecisionByProposal([101n]);
+    assert.equal(stored.proposalId, 101n);
+    assert.notEqual(stored.proposer, zeroAddress);
+    assert.equal(await decisions.read.decisionExists([101n]), true);
+
+    await assert.rejects(() => decisions.write.recordDecision([{
+      proposalId: 101n,
+      proposer: zeroAddress,
+      researchAgentId: 1n,
+      skepticAgentId: 2n,
+      councilAgentId: 3n,
+      proposalHash: hash,
+      researchReportHash: hash,
+      skepticReportHash: hash,
+      finalDecisionHash: hash,
+      researchVote: 3,
+      skepticVote: 2,
+      councilVote: 3,
+      decisionURI: "local://decision/duplicate",
+      createdAt: 1n
+    }]));
+  });
+
+  it("records multiple proposal ids without an auto-increment id", async () => {
+    const decisions = await viem.deployContract("TreasuryDecisionRegistry");
+    const hash = keccak256(toBytes("decision"));
+    for (const proposalId of [201n, 202n, 203n]) {
+      await decisions.write.recordDecision([{
+        proposalId,
+        proposer: zeroAddress,
+        researchAgentId: 1n,
+        skepticAgentId: 2n,
+        councilAgentId: 3n,
+        proposalHash: hash,
+        researchReportHash: hash,
+        skepticReportHash: hash,
+        finalDecisionHash: hash,
+        researchVote: 3,
+        skepticVote: 2,
+        councilVote: 3,
+        decisionURI: `local://decision/${proposalId}`,
+        createdAt: 1n
+      }]);
+      const stored = await decisions.read.getDecisionByProposal([proposalId]);
+      assert.equal(stored.proposalId, proposalId);
+    }
+  });
+
+  it("rejects invalid votes", async () => {
+    const decisions = await viem.deployContract("TreasuryDecisionRegistry");
+    const hash = keccak256(toBytes("decision"));
     await assert.rejects(() => decisions.write.recordDecision([{
       proposalId: 2n,
       proposer: zeroAddress,
