@@ -117,7 +117,10 @@ export async function recordDecisionOnChain(input: RecordDecisionInput, options:
     gas
   });
 
-  await publicClient.waitForTransactionReceipt({ hash: txHash });
+  const receipt = await publicClient.waitForTransactionReceipt({ hash: txHash });
+  if (receipt.status !== "success") {
+    throw new Error(`recordDecision transaction reverted: ${txHash}`);
+  }
   const finished = Date.now();
   return {
     mode: "monad",
@@ -143,7 +146,7 @@ export async function recordDecisionsInParallelOnChain(inputs: RecordDecisionInp
     return Promise.all(inputs.map((input, index) => Promise.resolve(mockReceipt(input, accounts[index]?.address))));
   }
 
-  const gasLimit = BigInt(process.env.PARALLEL_RECORD_DECISION_GAS_LIMIT || "350000");
+  const gasLimit = BigInt(process.env.PARALLEL_RECORD_DECISION_GAS_LIMIT || "650000");
   return Promise.all(inputs.map((input, index) => recordDecisionOnChain(input, {
     account: accounts[index],
     estimateGas: false,

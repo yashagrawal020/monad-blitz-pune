@@ -71,14 +71,14 @@ For the live parallel demo, configure three funded keystore files:
 
 ```text
 PARALLEL_MONSKILLS_KEYSTORE_FILES=file1,file2,file3
-PARALLEL_RECORD_DECISION_GAS_LIMIT=350000
+PARALLEL_RECORD_DECISION_GAS_LIMIT=650000
 ```
 
 If Foundry/cast keystores are unavailable during the hackathon, use funded testnet burner private keys instead:
 
 ```text
 PARALLEL_PRIVATE_KEYS=0xkey1,0xkey2,0xkey3
-PARALLEL_RECORD_DECISION_GAS_LIMIT=350000
+PARALLEL_RECORD_DECISION_GAS_LIMIT=650000
 ```
 
 The councils run sequentially for reliability. Only the three final `recordDecision` transactions are fired concurrently. This keeps the demo focused on Monad's independent transaction execution instead of LLM concurrency.
